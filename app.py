@@ -1,6 +1,9 @@
 import sys
 from bottle import Bottle, run
 
+# python app.py 8081 &
+# python app.py 8082 &
+# python app.py 8083 &
 def create_app(port):
     app = Bottle()
 
