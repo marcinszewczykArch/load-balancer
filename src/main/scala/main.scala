@@ -1,11 +1,48 @@
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-@main
-def main(): Unit =
-  // TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-  // to see how IntelliJ IDEA suggests fixing it.
-  (1 to 5).map(println)
+import cats.effect.{IO, IOApp}
+import cats.implicits.{catsSyntaxTuple2Parallel, catsSyntaxTuple2Semigroupal}
+import com.comcast.ip4s.{Host, Port}
+import domain.Config
+import domain.UrlsRef.{Backends, HealthChecks}
+import errors.config.InvalidConfig
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
+import org.typelevel.log4cats.syntax.*
+import pureconfig.{ConfigReader, ConfigSource}
+import services.{ParseUri, RoundRobin, UpdateBackendsAndGet}
+import http.HttpServer
 
-  for (i <- 1 to 5) do
-    // TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-    // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-    println(s"i = $i")
+object Main extends IOApp.Simple {
+
+  implicit def logger: Logger[IO] = Slf4jLogger.getLogger[IO]
+
+  private def hostAndPort(
+      host: String,
+      port: Int
+  ): Either[InvalidConfig, (Host, Port)] =
+    (
+      Host.fromString(host),
+      Port.fromInt(port),
+    ).tupled.toRight(InvalidConfig)
+
+  override def run: IO[Unit] =
+    for {
+      config <- IO(ConfigSource.default.loadOrThrow[Config])
+      backendUrls = config.backends
+      backends <- IO.ref(backendUrls)
+      healthChecks <- IO.ref(backendUrls)
+      hostAndPort <- IO.fromEither(hostAndPort(config.host, config.port))
+      (host, port) = hostAndPort
+      _ <- info"Starting server on $host:$port"
+      _ <- HttpServer.start(
+        Backends(backends),
+        HealthChecks(healthChecks),
+        port,
+        host,
+        config.healthCheckInterval,
+        ParseUri.Impl,
+        UpdateBackendsAndGet.Impl,
+        RoundRobin.forBackends,
+        RoundRobin.forHealthChecks
+      )
+    } yield ()
+}
