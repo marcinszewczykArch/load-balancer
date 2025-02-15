@@ -20,7 +20,10 @@ object SendAndExpect {
 
   implicit def logger: Logger[IO] = Slf4jLogger.getLogger[IO]
 
-  def toBackend(httpClient: HttpClient, req: Request[IO]): SendAndExpect[String] =
+  def toBackend(
+      httpClient: HttpClient,
+      req: Request[IO]
+  ): SendAndExpect[String] =
     new SendAndExpect[String] {
       override def apply(uri: Uri): IO[String] =
         info"[LOAD-BALANCER] sending request to $uri" *> httpClient
@@ -30,7 +33,7 @@ object SendAndExpect {
               s"resource was not found"
                 .pure[IO]
                 .flatTap(msg => warn"$msg")
-            case _                   =>
+            case _ =>
               s"server with uri: $uri is dead"
                 .pure[IO]
                 .flatTap(msg => warn"$msg")
@@ -46,7 +49,9 @@ object SendAndExpect {
             .as(ServerHealthStatus.Alive)
             .flatTap(_ => info"$uri is alive")
             .timeout(5.seconds)
-            .handleErrorWith(_ => warn"$uri is dead" *> ServerHealthStatus.Dead.pure[IO])
+            .handleErrorWith(_ =>
+              warn"$uri is dead" *> ServerHealthStatus.Dead.pure[IO]
+            )
     }
 
   val BackendSuccessTest: SendAndExpect[String] = _ => IO("Success")

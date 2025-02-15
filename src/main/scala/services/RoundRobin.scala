@@ -13,7 +13,7 @@ trait RoundRobin[F[_]] {
 
 object RoundRobin {
 
-  type BackendsRoundRobin     = RoundRobin[Option]
+  type BackendsRoundRobin = RoundRobin[Option]
   type HealthChecksRoundRobin = RoundRobin[Id]
 
   def forBackends: BackendsRoundRobin = new BackendsRoundRobin:
@@ -32,6 +32,7 @@ object RoundRobin {
     Try(Urls(urls.values.tail :+ urls.values.head))
       .getOrElse(Urls.empty)
 
-  val TestId: RoundRobin[Id]            = _ => IO.pure(Url("localhost:8081"))
-  val LocalHost8081: RoundRobin[Option] = _ => IO.pure(Some(Url("localhost:8081")))
+  val TestId: RoundRobin[Id] = _ => IO.pure(Url("localhost:8081"))
+  val LocalHost8081: RoundRobin[Option] = _ =>
+    IO.pure(Some(Url("localhost:8081")))
 }

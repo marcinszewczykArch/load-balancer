@@ -12,7 +12,11 @@ trait UpdateBackendsAndGet {
 object UpdateBackendsAndGet {
 
   object Impl extends UpdateBackendsAndGet {
-    override def apply(backends: Backends, url: Url, status: ServerHealthStatus): IO[Urls] =
+    override def apply(
+        backends: Backends,
+        url: Url,
+        status: ServerHealthStatus
+    ): IO[Urls] =
       backends.urls.updateAndGet { urls =>
         status match {
           case ServerHealthStatus.Alive => urls.add(url)

@@ -1,6 +1,5 @@
 package errors
 
-
 object config {
   type InvalidConfig = InvalidConfig.type
 
